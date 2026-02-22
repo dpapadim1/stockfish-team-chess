@@ -414,6 +414,17 @@ string Position::fen() const {
     ss << (ep_square() == SQ_NONE ? " - " : " " + UCIEngine::square(ep_square()) + " ")
        << st->rule50 << " " << 1 + gamePly / 4;  // 4 plies per full move
 
+    // 7. Seat ownership string (one digit per piece in board reading order)
+    ss << ' ';
+    for (Rank r = RANK_8;; --r) {
+        for (File f = FILE_A; f <= FILE_P; ++f) {
+            Square s = make_square(f, r);
+            if (!empty(s))
+                ss << int(seat_of(s));
+        }
+        if (r == RANK_1) break;
+    }
+
     return ss.str();
 }
 

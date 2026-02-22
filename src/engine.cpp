@@ -340,6 +340,13 @@ void Engine::trace_eval() const {
 const OptionsMap& Engine::get_options() const { return options; }
 OptionsMap&       Engine::get_options() { return options; }
 
+int Engine::static_eval() const {
+    // Cannot evaluate positions where side to move is in check
+    if (pos.checkers())
+        return 0;
+    return int(Eval::evaluate(pos));
+}
+
 std::string Engine::fen() const { return pos.fen(); }
 
 void Engine::flip() { pos.flip(); }

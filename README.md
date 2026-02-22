@@ -1,94 +1,161 @@
-# Stockfish - Team Chess (4-Player, 16x8 Board)
+<div align="center">
 
-A modified version of [Stockfish](https://github.com/official-stockfish/Stockfish), adapted for **4-player team chess** (2v2) on a 16x8 board.
+  [![Stockfish][stockfish128-logo]][website-link]
 
-Licensed under **GPLv3**, same as upstream Stockfish.
+  <h3>Stockfish</h3>
 
-## What is Team Chess?
+  A free and strong UCI chess engine.
+  <br>
+  <strong>[Explore Stockfish docs »][wiki-link]</strong>
+  <br>
+  <br>
+  [Report bug][issue-link]
+  ·
+  [Open a discussion][discussions-link]
+  ·
+  [Discord][discord-link]
+  ·
+  [Blog][website-blog-link]
 
-Team Chess is a chess variant where four players (two teams of two) play on a **16-file x 8-rank board**. Each team has two full sets of pieces placed side by side. Players take turns in order: White1, Black1, White2, Black2. A team wins by checkmating **either** enemy king.
+  [![Build][build-badge]][build-link]
+  [![License][license-badge]][license-link]
+  <br>
+  [![Release][release-badge]][release-link]
+  [![Commits][commits-badge]][commits-link]
+  <br>
+  [![Website][website-badge]][website-link]
+  [![Fishtest][fishtest-badge]][fishtest-link]
+  [![Discord][discord-badge]][discord-link]
 
-`
-  a b c d e f g h i j k l m n o p
-8 r n b q k b n r r n b q k b n r   <- Black (seats B1 + B2)
-7 p p p p p p p p p p p p p p p p
-6 . . . . . . . . . . . . . . . .
-5 . . . . . . . . . . . . . . . .
-4 . . . . . . . . . . . . . . . .
-3 . . . . . . . . . . . . . . . .
-2 P P P P P P P P P P P P P P P P
-1 R N B Q K B N R R N B Q K B N R   <- White (seats W1 + W2)
-  a b c d e f g h i j k l m n o p
-`
+</div>
 
-## Key Modifications from Upstream Stockfish
+## Overview
 
-### Board and Bitboard
-- **128-square board** (16 files x 8 ranks) using dual 64-bit bitboard pairs (lo/hi)
-- All bitboard operations adapted: shifts, pop_lsb, popcount, square iteration
-- No magic bitboards - direct ray-based slider attack generation
+[Stockfish][website-link] is a **free and strong UCI chess engine** derived from
+Glaurung 2.1 that analyzes chess positions and computes the optimal moves.
 
-### 4-Seat Game Logic
-- **4 seats** (W1, B1, W2, B2) with round-robin turn order
-- Custom **FEN format** with 7th field encoding piece ownership (which seat owns each piece)
-- Each player can only move their own pieces (not their teammate's)
-- Castling rights extended for all four rooks per side (KQkqABab)
+Stockfish **does not include a graphical user interface** (GUI) that is required
+to display a chessboard and to make it easy to input moves. These GUIs are
+developed independently from Stockfish and are available online. **Read the
+documentation for your GUI** of choice for information about how to use
+Stockfish with it.
 
-### Move Generation and Legality
-- checkersBB always recomputed in do_move() - teammate's pieces can give persistent check
-- Per-seat blocker/pinner tracking (blockersForSeatKing[])
-- Pin detection uses seat-specific king, not just color-level king
-- gives_check() tests against **both** enemy kings
+See also the Stockfish [documentation][wiki-usage-link] for further usage help.
 
-### Evaluation
-- **Classical evaluation** tuned for 4-player team chess:
-  - King safety assessed for all 4 kings
-  - Persistent check penalty (huge penalty when a king is under direct fire)
-  - Concentrated attack bonuses (focus firepower on the weaker enemy king)
-  - Team-aware piece coordination
-- **Simplified NNUE** (optional, loads at runtime):
-  - Architecture: 3,072 -> 64 -> 32 -> 1
-  - Features: SeatPieceSquare (4 seats x 6 piece types x 128 squares)
-  - Blended 60% NNUE + 40% classical when weights are loaded
-  - Weights loaded via `loadnnue <path>` UCI command
+## Files
 
-### Search
-- Null-move correctly recomputes checkersBB for next seat
-- No invalid assertions for 4-player (e.g., undo_null_move checker assert removed)
+This distribution of Stockfish consists of the following files:
 
-## Building
+  * [README.md][readme-link], the file you are currently reading.
 
-### Windows (MSVC)
-```bat
+  * [Copying.txt][license-link], a text file containing the GNU General Public
+    License version 3.
+
+  * [AUTHORS][authors-link], a text file with the list of authors for the project.
+
+  * [src][src-link], a subdirectory containing the full source code, including a
+    Makefile that can be used to compile Stockfish on Unix-like systems.
+
+  * a file with the .nnue extension, storing the neural network for the NNUE
+    evaluation. Binary distributions will have this file embedded.
+
+## Contributing
+
+__See [Contributing Guide](CONTRIBUTING.md).__
+
+### Donating hardware
+
+Improving Stockfish requires a massive amount of testing. You can donate your
+hardware resources by installing the [Fishtest Worker][worker-link] and viewing
+the current tests on [Fishtest][fishtest-link].
+
+### Improving the code
+
+In the [chessprogramming wiki][programming-link], many techniques used in
+Stockfish are explained with a lot of background information.
+The [section on Stockfish][programmingsf-link] describes many features
+and techniques used by Stockfish. However, it is generic rather than
+focused on Stockfish's precise implementation.
+
+The engine testing is done on [Fishtest][fishtest-link].
+If you want to help improve Stockfish, please read this [guideline][guideline-link]
+first, where the basics of Stockfish development are explained.
+
+Discussions about Stockfish take place these days mainly in the Stockfish
+[Discord server][discord-link]. This is also the best place to ask questions
+about the codebase and how to improve it.
+
+## Compiling Stockfish
+
+Stockfish has support for 32 or 64-bit CPUs, certain hardware instructions,
+big-endian machines such as Power PC, and other platforms.
+
+On Unix-like systems, it should be easy to compile Stockfish directly from the
+source code with the included Makefile in the folder `src`. In general, it is
+recommended to run `make help` to see a list of make targets with corresponding
+descriptions. An example suitable for most Intel and AMD chips:
+
+```
 cd src
-call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-cl.exe /std:c++17 /EHsc /O2 /Fe:stockfish_team.exe /I. ^
-  main.cpp engine.cpp uci.cpp search.cpp thread.cpp timeman.cpp tt.cpp ^
-  movegen.cpp movepick.cpp position.cpp bitboard.cpp evaluate.cpp ^
-  tune.cpp ucioption.cpp benchmark.cpp score.cpp memory.cpp misc.cpp ^
-  nnue\network.cpp nnue\nnue_misc.cpp nnue\nnue_accumulator.cpp ^
-  nnue\features\half_ka_v2_hm.cpp nnue\features\full_threats.cpp ^
-  syzygy\tbprobe.cpp ws2_32.lib advapi32.lib
+make -j profile-build
 ```
 
-## UCI Commands
+Detailed compilation instructions for all platforms can be found in our
+[documentation][wiki-compile-link]. Our wiki also has information about
+the [UCI commands][wiki-uci-link] supported by Stockfish.
 
-Standard Stockfish UCI protocol, plus:
-- `loadnnue <path>` - Load Team Chess NNUE weights from a binary file
+## Terms of use
 
-## Custom FEN Format
+Stockfish is free and distributed under the
+[**GNU General Public License version 3**][license-link] (GPL v3). Essentially,
+this means you are free to do almost exactly what you want with the program,
+including distributing it among your friends, making it available for download
+from your website, selling it (either by itself or as part of some bigger
+software package), or using it as the starting point for a software project of
+your own.
 
-```
-rnbqkbnrrnbqkbnr/pppppppppppppppp/88/88/88/88/PPPPPPPPPPPPPPPP/RNBQKBNRRNBQKBNR w1 KQkqABab - 0 1 1111111133333333111111113333333300000000222222220000000022222222
-```
+The only real limitation is that whenever you distribute Stockfish in some way,
+you MUST always include the license and the full source code (or a pointer to
+where the source code can be found) to generate the exact binary you are
+distributing. If you make any changes to the source code, these changes must
+also be made available under GPL v3.
 
-The 7th field encodes piece ownership: 0=W1, 1=B1, 2=W2, 3=B2, listed in board order (a8 to p8, a7 to p7, ..., a1 to p1), one digit per piece.
+## Acknowledgements
 
-## Credits
+Stockfish uses neural networks trained on [data provided by the Leela Chess Zero
+project][lc0-data-link], which is made available under the [Open Database License][odbl-link] (ODbL).
 
-- Original [Stockfish](https://github.com/official-stockfish/Stockfish) by the Stockfish developers
-- Team Chess modifications by [dpapadim1](https://github.com/dpapadim1)
 
-## License
+[authors-link]:       https://github.com/official-stockfish/Stockfish/blob/master/AUTHORS
+[build-link]:         https://github.com/official-stockfish/Stockfish/actions/workflows/stockfish.yml
+[commits-link]:       https://github.com/official-stockfish/Stockfish/commits/master
+[discord-link]:       https://discord.gg/GWDRS3kU6R
+[issue-link]:         https://github.com/official-stockfish/Stockfish/issues/new?assignees=&labels=&template=BUG-REPORT.yml
+[discussions-link]:   https://github.com/official-stockfish/Stockfish/discussions/new
+[fishtest-link]:      https://tests.stockfishchess.org/tests
+[guideline-link]:     https://github.com/official-stockfish/fishtest/wiki/Creating-my-first-test
+[license-link]:       https://github.com/official-stockfish/Stockfish/blob/master/Copying.txt
+[programming-link]:   https://www.chessprogramming.org/Main_Page
+[programmingsf-link]: https://www.chessprogramming.org/Stockfish
+[readme-link]:        https://github.com/official-stockfish/Stockfish/blob/master/README.md
+[release-link]:       https://github.com/official-stockfish/Stockfish/releases/latest
+[src-link]:           https://github.com/official-stockfish/Stockfish/tree/master/src
+[stockfish128-logo]:  https://stockfishchess.org/images/logo/icon_128x128.png
+[uci-link]:           https://backscattering.de/chess/uci/
+[website-link]:       https://stockfishchess.org
+[website-blog-link]:  https://stockfishchess.org/blog/
+[wiki-link]:          https://github.com/official-stockfish/Stockfish/wiki
+[wiki-compile-link]:  https://github.com/official-stockfish/Stockfish/wiki/Compiling-from-source
+[wiki-uci-link]:      https://github.com/official-stockfish/Stockfish/wiki/UCI-&-Commands
+[wiki-usage-link]:    https://github.com/official-stockfish/Stockfish/wiki/Download-and-usage
+[worker-link]:        https://github.com/official-stockfish/fishtest/wiki/Running-the-worker
+[lc0-data-link]:      https://storage.lczero.org/files/training_data
+[odbl-link]:          https://opendatacommons.org/licenses/odbl/odbl-10.txt
 
-Stockfish is free software, and distributed under the **GNU General Public License version 3** (GPLv3). See [Copying.txt](Copying.txt) for the full license text.
+[build-badge]:        https://img.shields.io/github/actions/workflow/status/official-stockfish/Stockfish/stockfish.yml?branch=master&style=for-the-badge&label=stockfish&logo=github
+[commits-badge]:      https://img.shields.io/github/commits-since/official-stockfish/Stockfish/latest?style=for-the-badge
+[discord-badge]:      https://img.shields.io/discord/435943710472011776?style=for-the-badge&label=discord&logo=Discord
+[fishtest-badge]:     https://img.shields.io/website?style=for-the-badge&down_color=red&down_message=Offline&label=Fishtest&up_color=success&up_message=Online&url=https%3A%2F%2Ftests.stockfishchess.org%2Ftests%2Ffinished
+[license-badge]:      https://img.shields.io/github/license/official-stockfish/Stockfish?style=for-the-badge&label=license&color=success
+[release-badge]:      https://img.shields.io/github/v/release/official-stockfish/Stockfish?style=for-the-badge&label=official%20release
+[website-badge]:      https://img.shields.io/website?style=for-the-badge&down_color=red&down_message=Offline&label=website&up_color=success&up_message=Online&url=https%3A%2F%2Fstockfishchess.org

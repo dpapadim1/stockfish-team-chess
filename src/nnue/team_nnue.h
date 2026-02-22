@@ -179,7 +179,7 @@ public:
             return VALUE_ZERO;
 
         // --- Step 1: Collect active features ---
-        int active[32];  // At most 32 pieces on the board
+        int active[64];  // Team chess has up to 64 pieces (16×4 occupied ranks)
         int numActive = 0;
 
         for (Bitboard b = pos.pieces(); bool(b);) {
@@ -192,7 +192,7 @@ public:
 
             if (seat < SEAT_NB && pt >= PAWN && pt <= KING) {
                 int idx = feature_index(seat, pt, sq);
-                if (idx >= 0 && idx < INPUT_DIM && numActive < 32) {
+                if (idx >= 0 && idx < INPUT_DIM && numActive < 64) {
                     active[numActive++] = idx;
                 }
             }
@@ -218,12 +218,14 @@ public:
         }
 
         // --- Step 3: Hidden layer 1 (L1_DIM → L2_DIM) ---
+        // Use int64_t accumulator: 64 products of int16(8128) × int16(32767)
+        // can reach ~17G, exceeding int32 range.
         int32_t l2_input[L2_DIM];
         for (int j = 0; j < L2_DIM; j++) {
-            int32_t sum = int32_t(weights_->l1_biases[j]) * WEIGHT_SCALE;
+            int64_t sum = int64_t(weights_->l1_biases[j]) * WEIGHT_SCALE;
             for (int i = 0; i < L1_DIM; i++)
-                sum += int32_t(l1_act[i]) * int32_t(weights_->l1_weights[i][j]);
-            l2_input[j] = sum / WEIGHT_SCALE;
+                sum += int64_t(l1_act[i]) * int64_t(weights_->l1_weights[i][j]);
+            l2_input[j] = int32_t(sum / WEIGHT_SCALE);
         }
 
         // ClippedReLU on L2 input
@@ -233,9 +235,10 @@ public:
         }
 
         // --- Step 4: Output layer (L2_DIM → 1) ---
-        int32_t output = int32_t(weights_->l2_bias) * WEIGHT_SCALE;
+        // Use int64_t: 32 products of int16(8128) × int16(32767) can reach ~8.5G.
+        int64_t output = int64_t(weights_->l2_bias) * WEIGHT_SCALE;
         for (int j = 0; j < L2_DIM; j++)
-            output += int32_t(l2_act[j]) * int32_t(weights_->l2_weights[j]);
+            output += int64_t(l2_act[j]) * int64_t(weights_->l2_weights[j]);
 
         // Convert from Q6.10 fixed-point to centipawns
         int score = int(output / (WEIGHT_SCALE * WEIGHT_SCALE));

@@ -159,6 +159,16 @@ void UCIEngine::loop() {
             sync_cout << engine.visualize() << sync_endl;
         else if (token == "eval")
             engine.trace_eval();
+        else if (token == "getfen")
+        {
+            // Custom command: output just the FEN string for easy parsing
+            sync_cout << "fen " << engine.fen() << sync_endl;
+        }
+        else if (token == "geteval")
+        {
+            // Custom command: output static eval in centipawns
+            sync_cout << "evalresult " << engine.static_eval() << sync_endl;
+        }
         else if (token == "loadnnue")
         {
             std::string nnuePath;
