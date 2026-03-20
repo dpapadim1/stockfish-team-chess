@@ -143,10 +143,14 @@ uint64_t ThreadPool::tb_hits() const { return accumulate(&Search::Worker::tbHits
 
 static size_t next_power_of_two(uint64_t count) {
     if (count <= 1) return 1;
-    // Use intrinsic bit scan for next power of 2
+#if defined(_MSC_VER)
     unsigned long idx;
     _BitScanReverse64(&idx, count - 1);
     return 2ULL << idx;
+#else
+    // GCC / Clang: __builtin_clzll counts leading zeros
+    return 1ULL << (64 - __builtin_clzll(count - 1));
+#endif
 }
 
 // Creates/destroys threads to match the requested number.
